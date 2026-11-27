@@ -1,1 +1,94 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CPA App Install Task — P-Code Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px; min-height: 100vh;
+      display: grid; place-items: center;
+      font-family: system-ui, Arial, sans-serif;
+      background: #f2f5f9; color: #172033;
+    }
+    main {
+      width: min(100%, 440px); background: white;
+      padding: 28px; border-radius: 18px;
+      box-shadow: 0 12px 36px #15243a14;
+    }
+    h1 { margin-top: 0; font-size: 1.5rem; }
+    p { line-height: 1.55; color: #526075; }
+    button {
+      width: 100%; padding: 13px 16px; margin-top: 12px;
+      border: 0; border-radius: 10px; cursor: pointer;
+      background: #1769e0; color: white; font-weight: 650;
+    }
+    button.secondary { background: #e9eff8; color: #19304f; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    #status { margin-top: 18px; min-height: 48px; }
+    #code {
+      margin-top: 14px; padding: 16px; border-radius: 10px;
+      background: #eef8f0; color: #146b2e; font-size: 1.5rem;
+      font-weight: 800; letter-spacing: 1px; text-align: center;
+      overflow-wrap: anywhere;
+    }
+    .note { font-size: .85rem; background: #fff7e6; padding: 12px; border-radius: 9px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Selesaikan tugas aplikasi</h1>
+  <p>Mulai sesi tugas. Setelah penyedia tracking mengonfirmasi instalasi secara sah, P-Code dapat diminta di halaman ini.</p>
 
+  <button id="start">Mulai tugas</button>
+  <button id="check" class="secondary" disabled>Periksa P-Code</button>
+  <div id="status" role="status" aria-live="polite">Belum ada sesi.</div>
+  <div id="code" hidden></div>
+
+  <p class="note">
+    Demo lokal: simulasi instalasi hanya untuk menguji alur teknis. Ini bukan bukti bahwa aplikasi benar-benar diunduh atau diinstal.
+  </p>
+</main>
+<script>
+  let sessionId = null;
+  const statusEl = document.querySelector("#status");
+  const codeEl = document.querySelector("#code");
+  const startBtn = document.querySelector("#start");
+  const checkBtn = document.querySelector("#check");
+
+  startBtn.addEventListener("click", async () => {
+    startBtn.disabled = true;
+    statusEl.textContent = "Membuat sesi...";
+    codeEl.hidden = true;
+
+    try {
+      const response = await fetch("/api/start", { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Gagal membuat sesi");
+      sessionId = data.session_id;
+      checkBtn.disabled = false;
+      statusEl.textContent = "Sesi dibuat. Hubungkan event instalasi provider untuk verifikasi.";
+    } catch (error) {
+      statusEl.textContent = error.message;
+      startBtn.disabled = false;
+    }
+  });
+
+  checkBtn.addEventListener("click", async () => {
+    if (!sessionId) return;
+    statusEl.textContent = "Memeriksa status...";
+    try {
+      const response = await fetch("/api/code/" + encodeURIComponent(sessionId));
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Belum terverifikasi");
+      codeEl.textContent = data.p_code;
+      codeEl.hidden = false;
+      statusEl.textContent = "P-Code berhasil diterbitkan. Berlaku sampai waktu kedaluwarsa yang ditentukan server.";
+    } catch (error) {
+      statusEl.textContent = error.message;
+    }
+  });
+</script>
+</body>
+</html>
